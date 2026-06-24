@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Curve Fitting Visualization</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                        mono: ['Consolas', 'Monaco', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            light: '#2dd4bf', /* Teal-400 */
+                            DEFAULT: '#0d9488', /* Teal-600 */
+                            dark: '#0f766e', /* Teal-700 */
+                        },
+                        darkbg: '#050505', /* Deep Black */
+                        panel: 'rgba(20, 20, 20, 0.65)', /* Darker glass panels */
+                        panelborder: 'rgba(255, 255, 255, 0.08)',
+                    },
+                    animation: {
+                        'spin-slow': 'spin 8s linear infinite',
+                        'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        pulseGlow: {
+                            '0%, 100%': { boxShadow: '0 0 15px rgba(45, 212, 191, 0.2)' },
+                            '50%': { boxShadow: '0 0 30px rgba(45, 212, 191, 0.6)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050505;
+            color: #e2e8f0;
+            position: relative;
+        }
+
+        /* Animated Floating Background Orbs */
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            z-index: -1;
+            animation: floatOrb 20s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+        .orb-1 {
+            width: 400px; height: 400px;
+            background: rgba(13, 148, 136, 0.25);
+            top: -100px; left: -100px;
+        }
+        .orb-2 {
+            width: 500px; height: 500px;
+            background: rgba(45, 212, 191, 0.15);
+            bottom: -150px; right: -100px;
+            animation-delay: -5s;
+            animation-duration: 25s;
+        }
+        .orb-3 {
+            width: 300px; height: 300px;
+            background: rgba(13, 148, 136, 0.15);
+            top: 40%; left: 40%;
+            animation-duration: 18s;
+            animation-delay: -2s;
+        }
+
+        @keyframes floatOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(50px, 80px) scale(1.1); }
+            100% { transform: translate(-30px, 120px) scale(0.95); }
+        }
+
+        /* Glassmorphism Panel Enhancements */
+        .glass-panel {
+            background: var(--tw-colors-panel);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--tw-colors-panelborder);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-panel-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 45px 0 rgba(13, 148, 136, 0.25);
+            border-color: rgba(45, 212, 191, 0.3);
+            background: rgba(30, 30, 30, 0.7);
+        }
+
+        /* Glowing Button Effects */
+        .btn-glow {
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .btn-glow::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(45, 212, 191, 0.4) 0%, transparent 60%);
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+            transform: scale(0.5);
+        }
+        .btn-glow:hover::after {
+            opacity: 1;
+            transform: scale(1);
+            animation: rotateGlow 4s linear infinite;
+        }
+
+        @keyframes rotateGlow {
+            0% { transform: rotate(0deg) scale(1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px;}
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: #0d9488; border-radius: 4px; border: 1px solid #050505; }
+        ::-webkit-scrollbar-thumb:hover { background: #2dd4bf; }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+
+        /* Checkbox Styling */
+        .custom-checkbox {
+            appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid #4b5563;
+            border-radius: 0.3rem;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            background: rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .custom-checkbox:checked { 
+            background: #0d9488; 
+            border-color: #2dd4bf; 
+            box-shadow: 0 0 10px rgba(45, 212, 191, 0.5);
+        }
+        .custom-checkbox:checked::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: white;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.75rem;
+        }
+
+        /* Table Styles */
+        .data-table th, .data-table td { padding: 0.6rem 0.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .data-table th { color: #94a3b8; font-weight: 500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .data-table tr:hover { background-color: rgba(255, 255, 255, 0.02); }
+        
+        /* Requirement Badge */
+        .req-badge {
+            font-size: 0.6rem;
+            background: rgba(45, 212, 191, 0.15);
+            color: #2dd4bf;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            border: 1px solid rgba(45, 212, 191, 0.3);
+            margin-left: 0.5rem;
+            vertical-align: middle;
+            font-weight: 600;
+            box-shadow: 0 0 8px rgba(45, 212, 191, 0.1);
+        }
+
+        /* Sidebar Nav Hover Enhancements */
+        .nav-link { position: relative; overflow: hidden; }
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            background: #2dd4bf;
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+            box-shadow: 0 0 10px #2dd4bf;
+        }
+        .nav-link:hover::before, .nav-link.active-nav::before { transform: scaleY(1); }
+        .nav-link:hover { transform: translateX(5px); color: white; }
+
+        #sidebar { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Print Settings for Full Page PDF Export */
+        @media print {
+            body, html, main, #workspace {
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                position: static !important;
+                background: #050505 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .bg-orb { display: none !important; } /* Hide moving orbs on print */
+            #sidebar { display: none !important; }
+            header {
+                position: static !important;
+                border-bottom: 1px solid #333 !important;
+            }
+            header button { display: none !important; }
+            .glass-panel {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border: 1px solid #333 !important;
+                box-shadow: none !important;
+                margin-bottom: 20px;
+                transform: none !important;
+            }
+            ::-webkit-scrollbar { display: none; }
+        }
+    </style>
+</head>
+<body class="antialiased h-screen flex overflow-hidden">
+
+    <!-- Moving Background Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <!-- Fixed Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 shrink-0 h-screen glass-panel transform -translate-x-full md:relative md:translate-x-0 border-r border-panelborder flex flex-col bg-black/40">
+        <div class="p-6 flex items-center justify-between shrink-0 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-light to-brand flex items-center justify-center shadow-[0_0_15px_rgba(45,212,191,0.4)] animate-pulse-glow">
+                    <i class="fa-solid fa-chart-line text-white text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-white tracking-wide drop-shadow-md">Curve<span class="text-brand-light drop-shadow-[0_0_8px_rgba(45,212,191,0.6)]">Fit</span></h1>
+            </div>
+            <button id="closeSidebar" class="md:hidden text-gray-400 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-1 px-4 py-6 space-y-3 overflow-y-auto">
+            <a href="#workspace" class="nav-link active-nav flex items-center gap-3 px-4 py-3 bg-brand/20 text-brand-light rounded-xl border border-brand/30 transition-all shadow-[0_0_15px_rgba(13,148,136,0.15)]">
+                <i class="fa-solid fa-square-poll-vertical w-5"></i><span class="font-medium">Visualization</span>
+            </a>
+            <a href="#analysis-section" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 rounded-xl transition-all">
+                <i class="fa-solid fa-calculator w-5"></i><span class="font-medium">Model Analysis</span>
+            </a>
+            <a href="#residuals-section" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 rounded-xl transition-all">
+                <i class="fa-solid fa-chart-bar w-5"></i><span class="font-medium">Residuals</span>
+            </a>
+            <a href="#applications-section" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 rounded-xl transition-all">
+                <i class="fa-solid fa-earth-americas w-5"></i><span class="font-medium">Real-Life Apps</span>
+            </a>
+            <a href="#team-section" class="nav-link flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 rounded-xl transition-all">
+                <i class="fa-solid fa-users w-5"></i><span class="font-medium">Team Info</span>
+            </a>
+        </nav>
+        
+        <div class="p-4 mt-auto border-t border-white/5">
+            <div class="text-xs text-brand-light/70 text-center flex items-center justify-center gap-2">
+                <i class="fa-solid fa-shield-halved animate-pulse"></i> [Req 11] Extensible Ready
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        
+        <header class="shrink-0 h-20 glass-panel border-b border-panelborder flex items-center justify-between px-6 lg:px-10 z-40 rounded-none border-x-0 border-t-0 bg-black/20">
+            <div class="flex items-center gap-4">
+                <button id="openSidebar" class="md:hidden text-gray-300 hover:text-white focus:outline-none transition-colors"><i class="fa-solid fa-bars text-2xl"></i></button>
+                <h2 class="text-xl lg:text-2xl font-semibold text-white tracking-wide hidden sm:block drop-shadow-md">Interactive Visualization System</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="window.print()" class="btn-glow w-10 h-10 rounded-full glass-panel flex items-center justify-center text-brand-light hover:text-white border border-brand/40 shadow-[0_0_10px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.5)] transition-all" title="Export Report [Req 10]">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </button>
+                <div class="w-10 h-10 rounded-full border-2 border-brand/50 shadow-[0_0_15px_rgba(45,212,191,0.3)] shrink-0 overflow-hidden relative group cursor-pointer">
+                    <img src="https://media.licdn.com/dms/image/v2/D5603AQHs_4Neqqqd7Q/profile-displayphoto-scale_200_200/B56Znp2m6SJwAY-/0/1760565031799?e=2147483647&v=beta&t=G4HZClzzTYOP5orObBF-yYvrvxwfYyeGQE1rctTkPkQ" alt="User" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                    <div class="absolute inset-0 bg-brand/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth w-full relative" id="workspace">
+            <div class="max-w-7xl mx-auto space-y-6">
+                
+                <!-- ROW 1: Chart and Data Entry -->
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    
+                    <!-- Main Chart Area -->
+                    <div class="lg:col-span-3 glass-panel glass-panel-hover rounded-2xl p-4 lg:p-6 animate-fade-in flex flex-col relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                        <div class="flex justify-between items-center mb-4 relative z-10">
+                            <div>
+                                <h3 class="text-lg font-semibold text-white flex items-center">
+                                    Interactive Visualization <span class="req-badge">Req 3, 8</span>
+                                </h3>
+                                <p class="text-xs text-gray-400 mt-1">Click directly on the chart to dynamically drop or edit points.</p>
+                            </div>
+                            <div class="flex flex-col items-end gap-2">
+                                <div class="flex gap-3 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-md" id="chartLegend"></div>
+                                <label class="flex items-center gap-2 cursor-pointer text-xs text-orange-400 border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 rounded-lg hover:bg-orange-500/20 transition-colors shadow-[0_0_10px_rgba(249,115,22,0.1)]">
+                                    <input type="checkbox" id="outlierToggle" class="accent-orange-500 w-3.5 h-3.5"> Highlight Outliers <span class="req-badge border-orange-500/50 text-orange-400 bg-orange-500/10 shadow-none">Req 5</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="relative w-full h-[400px] flex-1 z-10">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Data Management Panel -->
+                    <div class="glass-panel glass-panel-hover rounded-2xl p-5 animate-fade-in flex flex-col h-[480px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-md font-semibold text-white flex items-center"><i class="fa-solid fa-table text-brand-light mr-2 shadow-[0_0_10px_rgba(45,212,191,0.5)] rounded-full"></i> Data <span class="req-badge">Req 1</span></h3>
+                            <button id="clearDataBtn" class="text-xs text-red-400 hover:text-red-300 hover:scale-105 transition-transform bg-red-400/10 px-2 py-1 rounded border border-red-400/20"><i class="fa-solid fa-trash-can mr-1"></i> Clear</button>
+                        </div>
+                        
+                        <!-- Add Point Form -->
+                        <div class="flex gap-2 mb-3 shrink-0">
+                            <input type="number" id="inputX" placeholder="X" class="w-1/2 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-light focus:shadow-[0_0_10px_rgba(45,212,191,0.2)] transition-all">
+                            <input type="number" id="inputY" placeholder="Y" class="w-1/2 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-light focus:shadow-[0_0_10px_rgba(45,212,191,0.2)] transition-all">
+                            <button id="addPointBtn" class="btn-glow bg-brand hover:bg-brand-light text-white rounded-lg px-4 py-2 transition-colors shadow-[0_0_10px_rgba(13,148,136,0.3)]"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        
+                        <button id="genRandomBtn" class="w-full text-xs bg-brand/10 hover:bg-brand/20 text-brand-light border border-brand/30 rounded-lg py-2 mb-4 transition-all hover:shadow-[0_0_15px_rgba(45,212,191,0.2)] flex items-center justify-center gap-2 font-medium">
+                            <i class="fa-solid fa-shuffle"></i> Generate Noisy Data
+                        </button>
+
+                        <!-- Data Table -->
+                        <div class="flex-1 overflow-y-auto bg-black/30 rounded-lg border border-white/5 mb-4 shadow-inner">
+                            <table class="w-full data-table text-sm">
+                                <thead class="sticky top-0 bg-[#0d1615] shadow-md z-10 border-b border-brand/20">
+                                    <tr><th>X</th><th>Y</th><th>Act</th></tr>
+                                </thead>
+                                <tbody id="dataTableBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Import -->
+                        <div class="shrink-0 bg-black/20 p-2 rounded-lg border border-white/5">
+                            <label class="block text-xs text-gray-400 mb-1.5 ml-1"><i class="fa-solid fa-file-import mr-1"></i> Import Data (CSV/JSON)</label>
+                            <input type="file" id="dataFileInput" accept=".csv, .json" class="block w-full text-xs text-gray-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand/20 file:text-brand-light hover:file:bg-brand/40 hover:file:shadow-[0_0_10px_rgba(45,212,191,0.2)] transition-all cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 2: Model Configuration -->
+                <div class="glass-panel glass-panel-hover rounded-2xl p-6 animate-fade-in delay-100 relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"></div>
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4 relative z-10">
+                        <h3 class="text-lg font-semibold text-white flex items-center drop-shadow-md">
+                            <i class="fa-solid fa-layer-group text-purple-400 mr-3 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]"></i> Models & Parameters <span class="req-badge border-purple-500/50 text-purple-300 bg-purple-500/10">Req 2, 4</span>
+                        </h3>
+                        <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/10 shadow-inner">
+                            <label class="text-sm text-gray-300 font-medium">Polynomial Degree:</label>
+                            <input type="number" id="polyDegree" value="2" min="1" max="10" class="w-16 bg-brand/10 border border-brand/50 rounded text-center text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-light/50 transition-all font-mono">
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-4 mt-2 relative z-10 bg-black/20 p-4 rounded-xl border border-white/5">
+                        <label class="flex items-center gap-2 cursor-pointer group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/5 transition-colors">
+                            <input type="checkbox" class="custom-checkbox model-toggle" value="linear" checked>
+                            <span class="text-sm text-gray-300 group-hover:text-white font-medium">Linear</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/5 transition-colors">
+                            <input type="checkbox" class="custom-checkbox model-toggle" value="polynomial" checked>
+                            <span class="text-sm text-gray-300 group-hover:text-white font-medium">Polynomial</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/5 transition-colors">
+                            <input type="checkbox" class="custom-checkbox model-toggle" value="exponential">
+                            <span class="text-sm text-gray-300 group-hover:text-white font-medium">Exponential</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/5 transition-colors">
+                            <input type="checkbox" class="custom-checkbox model-toggle" value="logarithmic">
+                            <span class="text-sm text-gray-300 group-hover:text-white font-medium">Logarithmic</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/5 transition-colors">
+                            <input type="checkbox" class="custom-checkbox model-toggle" value="power">
+                            <span class="text-sm text-gray-300 group-hover:text-white font-medium">Power</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ROW 3: Analysis Results Table -->
+                <div id="analysis-section" class="glass-panel glass-panel-hover rounded-2xl p-6 animate-fade-in delay-200">
+                    <h3 class="text-lg font-semibold text-white mb-5 flex items-center">
+                        <i class="fa-solid fa-square-root-variable text-green-400 mr-3 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]"></i> Comparison & Metrics <span class="req-badge border-green-500/50 text-green-300 bg-green-500/10">Req 6, 7</span>
+                    </h3>
+                    <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/20 shadow-inner">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-black/40">
+                                <tr class="border-b border-brand/30 text-brand-light text-sm tracking-wide">
+                                    <th class="py-4 px-5 font-semibold">Model</th>
+                                    <th class="py-4 px-5 font-semibold">Equation / Parameters</th>
+                                    <th class="py-4 px-5 font-semibold text-right">R² Score</th>
+                                    <th class="py-4 px-5 font-semibold text-right">RMSE</th>
+                                    <th class="py-4 px-5 font-semibold text-center">Model Behavior</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody" class="text-sm text-gray-200">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ROW 4: Residuals Plot -->
+                <div id="residuals-section" class="glass-panel glass-panel-hover rounded-2xl p-6 animate-fade-in delay-300 relative overflow-hidden">
+                    <div class="absolute right-0 bottom-0 w-40 h-40 bg-orange-500/5 rounded-full blur-3xl"></div>
+                    <div class="mb-5 relative z-10">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fa-solid fa-chart-gantt text-orange-400 mr-3 drop-shadow-[0_0_8px_rgba(251,146,60,0.5)]"></i> Error & Residuals <span class="req-badge border-orange-500/50 text-orange-300 bg-orange-500/10">Req 5</span>
+                        </h3>
+                        <p class="text-xs text-gray-400 mt-1">Variance analysis: (Observed Data - Predicted Data). Reveals underlying uncaptured patterns.</p>
+                    </div>
+                    <div class="relative w-full h-[300px] z-10 bg-black/20 rounded-xl p-2 border border-white/5">
+                        <canvas id="residualsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- ROW 5: Real-Life Applications -->
+                <div id="applications-section" class="glass-panel glass-panel-hover rounded-2xl p-6 lg:p-8 animate-fade-in delay-300 relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-brand/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                    <h2 class="text-2xl font-bold text-white mb-6 flex items-center relative z-10 drop-shadow-md">
+                        <i class="fa-solid fa-earth-americas text-brand-light mr-3 drop-shadow-[0_0_10px_rgba(45,212,191,0.6)] animate-pulse"></i> Educational Support & Applications <span class="req-badge text-base">Req 9</span>
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                        <div class="p-6 rounded-xl border border-brand/30 bg-gradient-to-br from-brand/10 to-transparent shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:border-brand/60 transition-colors">
+                            <h4 class="text-white font-semibold text-lg mb-3 flex items-center"><i class="fa-solid fa-chart-line text-brand-light mr-2"></i> Economics (Exponential)</h4>
+                            <p class="text-gray-300 text-sm mb-3">Exponential models describe data that grows at a constant percentage rate. Essential for:</p>
+                            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-400">
+                                <li><strong class="text-white">GDP Growth:</strong> Tracking national production over decades.</li>
+                                <li>Calculating compound interest and inflation rates.</li>
+                                <li>Modeling initial population growth in biological ecosystems.</li>
+                            </ul>
+                        </div>
+
+                        <div class="p-6 rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:border-white/30 transition-colors">
+                            <h4 class="text-white font-semibold text-lg mb-3 flex items-center"><i class="fa-solid fa-gears text-purple-400 mr-2"></i> Engineering (Polynomial)</h4>
+                            <p class="text-gray-300 text-sm mb-3">Polynomial curves are excellent for mapping complex, non-linear physical phenomena:</p>
+                            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-400">
+                                <li><strong class="text-white">Material Stress:</strong> Mapping stress-strain curves before fracture.</li>
+                                <li><strong class="text-white">Aerodynamics:</strong> Modeling wind resistance at various velocities.</li>
+                                <li>Sensor Calibration for non-linear hardware noise.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 6: Team Info -->
+                <div id="team-section" class="glass-panel glass-panel-hover rounded-2xl p-6 lg:p-8 animate-fade-in delay-300 relative overflow-hidden border-t-4 border-t-brand">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-brand/10 rounded-full blur-[80px] -mr-10 -mt-10 pointer-events-none"></div>
+                    
+                    <div class="text-center mb-10 relative z-10">
+                        <div class="inline-block px-4 py-1.5 rounded-full bg-brand/10 border border-brand/30 text-brand-light text-xs font-bold tracking-widest uppercase mb-3 shadow-[0_0_15px_rgba(45,212,191,0.2)]">
+                            Project Topic 4. Curve fitting
+                        </div>
+                        <h2 class="text-4xl font-extrabold text-white mb-3 tracking-tight">Team <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-light to-teal-200 drop-shadow-[0_0_15px_rgba(45,212,191,0.4)]">ODD CODER</span></h2>
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-gray-300 text-sm backdrop-blur-sm">
+                            <i class="fa-solid fa-user-astronaut text-brand-light animate-bounce"></i> Among Us
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                        <!-- Leader -->
+                        <div class="bg-black/40 p-6 rounded-xl border border-brand/50 relative group hover:bg-black/60 hover:shadow-[0_0_25px_rgba(13,148,136,0.3)] transition-all duration-300 overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-brand text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-md z-10">LEADER</div>
+                            <div class="absolute inset-0 bg-gradient-to-b from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div class="flex items-center gap-4 relative z-10">
+                                <div class="shrink-0 w-16 h-16 rounded-full p-1 bg-gradient-to-br from-brand-light to-brand overflow-hidden group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 shadow-[0_0_15px_rgba(45,212,191,0.4)]">
+                                    <img src="https://media.licdn.com/dms/image/v2/D5603AQHs_4Neqqqd7Q/profile-displayphoto-scale_200_200/B56Znp2m6SJwAY-/0/1760565031799?e=2147483647&v=beta&t=G4HZClzzTYOP5orObBF-yYvrvxwfYyeGQE1rctTkPkQ" class="w-full h-full rounded-full object-cover border-2 border-black" alt="Tuhin">
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-md leading-tight group-hover:text-brand-light transition-colors">Gazi Shaharabi Anwar Tuhin</h4>
+                                    <p class="text-xs text-brand-light/80 mt-1 font-mono bg-black/50 inline-block px-2 py-0.5 rounded">ID: C231035</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Member 1 -->
+                        <div class="bg-black/30 p-6 rounded-xl border border-white/10 group hover:border-white/30 hover:bg-black/50 transition-all duration-300 overflow-hidden relative">
+                            <div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div class="flex items-center gap-4 relative z-10">
+                                <div class="shrink-0 w-16 h-16 rounded-full p-1 bg-gradient-to-br from-gray-500 to-gray-700 overflow-hidden group-hover:scale-110 transition-transform duration-500">
+                                    <img src="https://scontent.fcgp29-1.fna.fbcdn.net/v/t39.30808-1/459735725_1712791279570387_1555931661077497241_n.jpg?stp=c0.13.498.498a_dst-jpg_tt6&cstp=mx498x498&ctp=s480x480&_nc_cat=107&ccb=1-7&_nc_sid=1d2534&_nc_ohc=j0my4g8_6yIQ7kNvwHeneat&_nc_oc=Adry817la9E29slrEObSt9nG_A2nvaE7c5Lm44ZsGCPC5wPFQ0eeb9bhhdWSZM4cLXk&_nc_zt=24&_nc_ht=scontent.fcgp29-1.fna&_nc_gid=17JO2ym_T3IzTVkI40pRoQ&_nc_ss=7b2a8&oh=00_Af-V0swUhUnzlwboXiKkl3vn4tCFByTSUvbIAc-mWG23Qw&oe=6A41F19D" alt="Hasan">
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold text-md group-hover:text-gray-200 transition-colors">Mohammed Hasan</h4>
+                                    <p class="text-xs text-gray-400 mt-1 font-mono bg-black/50 inline-block px-2 py-0.5 rounded">ID: C231005</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Member 2 -->
+                        <div class="bg-black/30 p-6 rounded-xl border border-white/10 group hover:border-white/30 hover:bg-black/50 transition-all duration-300 overflow-hidden relative">
+                             <div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div class="flex items-center gap-4 relative z-10">
+                                <div class="shrink-0 w-16 h-16 rounded-full p-1 bg-gradient-to-br from-gray-500 to-gray-700 overflow-hidden group-hover:scale-110 transition-transform duration-500">
+                                    <img src="https://scontent.fcgp29-1.fna.fbcdn.net/v/t39.30808-6/488274655_4016357768680268_2186966487643059548_n.jpg?stp=cp6_dst-jpg_tt6&cstp=mx2004x2004&ctp=s2004x2004&_nc_cat=107&ccb=1-7&_nc_sid=a5f93a&_nc_ohc=V5c0we4nDI4Q7kNvwEqgHTp&_nc_oc=AdoqRo2mHc6eu7KA-23VrqGWrWpUsEsPaowYEDs94uSL0OQLz4khQxRA8zEHWqbC-GU&_nc_zt=23&_nc_ht=scontent.fcgp29-1.fna&_nc_gid=O-nRI77hK97G4M6rpEi_BA&_nc_ss=7b2a8&oh=00_Af-NyG9l2G5ZqGPKBo7U7xgMTbcYgD7iNhYNSEEMET8OZw&oe=6A41FDB7" class="w-full h-full rounded-full object-cover border-2 border-black" alt="Shuvo">
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold text-md group-hover:text-gray-200 transition-colors">Shuvo Nath</h4>
+                                    <p class="text-xs text-gray-400 mt-1 font-mono bg-black/50 inline-block px-2 py-0.5 rounded">ID: C231021</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <footer class="text-center mt-12 pb-6 text-sm text-gray-600">
+                <p>Designed & Developed for Academic Visualization by <span class="text-brand-light/80 font-medium tracking-wide">ODD CODER</span></p>
+            </footer>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. CORE MATH & REGRESSION ENGINE ---
+        
+        function solveMatrix(A, B) {
+            let n = A.length;
+            let M = A.map((row, i) => [...row, B[i]]); 
+
+            for (let i = 0; i < n; i++) {
+                let maxEl = Math.abs(M[i][i]), maxRow = i;
+                for (let k = i + 1; k < n; k++) {
+                    if (Math.abs(M[k][i]) > maxEl) { maxEl = Math.abs(M[k][i]); maxRow = k; }
+                }
+                
+                [M[i], M[maxRow]] = [M[maxRow], M[i]];
+
+                for (let k = i + 1; k < n; k++) {
+                    let c = -M[k][i] / M[i][i];
+                    for (let j = i; j <= n; j++) {
+                        if (i === j) M[k][j] = 0; else M[k][j] += c * M[i][j];
+                    }
+                }
+            }
+
+            let x = new Array(n).fill(0);
+            for (let i = n - 1; i >= 0; i--) {
+                x[i] = M[i][n] / M[i][i];
+                for (let k = i - 1; k >= 0; k--) M[k][n] -= M[k][i] * x[i];
+            }
+            return x; 
+        }
+
+        const Models = {
+            linear: {
+                name: 'Linear', color: '#ef4444', 
+                fit: (pts) => {
+                    const coefs = polyFit(pts, 1);
+                    return { coefs: coefs, fn: (x) => coefs[0] + coefs[1]*x, eq: `y = ${coefs[1].toFixed(4)}x + ${coefs[0].toFixed(4)}` };
+                }
+            },
+            polynomial: {
+                name: 'Polynomial', color: '#3b82f6', 
+                fit: (pts, degree) => {
+                    const coefs = polyFit(pts, degree);
+                    let eq = `y = ${coefs[0].toFixed(4)}`;
+                    for(let i=1; i<=degree; i++) eq += ` + ${coefs[i].toFixed(4)}x^${i}`;
+                    return { coefs: coefs, fn: (x) => coefs.reduce((sum, c, i) => sum + c * Math.pow(x, i), 0), eq: eq };
+                }
+            },
+            exponential: {
+                name: 'Exponential', color: '#f59e0b', 
+                fit: (pts) => {
+                    const validPts = pts.filter(p => p.y > 0);
+                    if(validPts.length < 2) return null;
+                    const logPts = validPts.map(p => ({x: p.x, y: Math.log(p.y)}));
+                    const coefs = polyFit(logPts, 1); 
+                    const A = Math.exp(coefs[0]);
+                    const B = coefs[1];
+                    return { coefs: [A, B], fn: (x) => A * Math.exp(B * x), eq: `y = ${A.toFixed(4)}e^(${B.toFixed(4)}x)` };
+                }
+            },
+            logarithmic: {
+                name: 'Logarithmic', color: '#a855f7', 
+                fit: (pts) => {
+                    const validPts = pts.filter(p => p.x > 0);
+                    if(validPts.length < 2) return null;
+                    const logPts = validPts.map(p => ({x: Math.log(p.x), y: p.y}));
+                    const coefs = polyFit(logPts, 1); 
+                    return { coefs: coefs, fn: (x) => coefs[0] + coefs[1] * Math.log(x), eq: `y = ${coefs[1].toFixed(4)}ln(x) + ${coefs[0].toFixed(4)}` };
+                }
+            },
+            power: {
+                name: 'Power Law', color: '#ec4899', 
+                fit: (pts) => {
+                    const validPts = pts.filter(p => p.x > 0 && p.y > 0);
+                    if(validPts.length < 2) return null;
+                    const logPts = validPts.map(p => ({x: Math.log(p.x), y: Math.log(p.y)}));
+                    const coefs = polyFit(logPts, 1); 
+                    const A = Math.exp(coefs[0]);
+                    const B = coefs[1];
+                    return { coefs: [A, B], fn: (x) => A * Math.pow(x, B), eq: `y = ${A.toFixed(4)}x^${B.toFixed(4)}` };
+                }
+            }
+        };
+
+        function polyFit(points, degree) {
+            if(points.length <= degree) return new Array(degree+1).fill(0);
+            let n = degree + 1;
+            let A = Array(n).fill(0).map(() => Array(n).fill(0));
+            let B = Array(n).fill(0);
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    A[i][j] = points.reduce((sum, p) => sum + Math.pow(p.x, i + j), 0);
+                }
+                B[i] = points.reduce((sum, p) => sum + p.y * Math.pow(p.x, i), 0);
+            }
+            return solveMatrix(A, B);
+        }
+
+        function calculateMetrics(points, fn) {
+            if(!fn || points.length === 0) return { mse: 0, rmse: 0, r2: 0, residuals: [], outliers: [] };
+            
+            let sse = 0;
+            let sumY = 0;
+            let residuals = [];
+
+            points.forEach(p => {
+                let predicted = fn(p.x);
+                let error = p.y - predicted;
+                if(!isNaN(error) && isFinite(error)) {
+                    sse += error * error;
+                    sumY += p.y;
+                    residuals.push({x: p.x, y: error, originalId: p.id});
+                }
+            });
+
+            let meanY = sumY / points.length;
+            let sst = points.reduce((sum, p) => sum + Math.pow(p.y - meanY, 2), 0);
+
+            let mse = sse / points.length;
+            let rmse = Math.sqrt(mse);
+            let r2 = sst === 0 ? 1 : 1 - (sse / sst);
+
+            let outliers = residuals.filter(r => Math.abs(r.y) > 1.5 * rmse).map(r => r.originalId);
+
+            return { mse, rmse, r2, residuals, outliers };
+        }
+
+
+        // --- 2. STATE MANAGEMENT & UI ---
+        
+        let dataPoints = [
+            {id: 1, x: 5, y: 1.5}, {id: 2, x: 10, y: 2.1}, {id: 3, x: 15, y: 2.8}, 
+            {id: 4, x: 20, y: 3.2}, {id: 5, x: 25, y: 3.6}, {id: 6, x: 30, y: 3.8}, 
+            {id: 7, x: 35, y: 3.9}, {id: 8, x: 12, y: 2.5}, {id: 9, x: 18, y: 2.9},
+            {id: 10, x: 28, y: 3.7}, {id: 11, x: 8, y: 1.8}, {id: 12, x: 22, y: 3.4}
+        ];
+        let nextId = 13;
+
+        let mainChart, residualsChart;
+
+        function initCharts() {
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = 'Poppins';
+
+            const ctxMain = document.getElementById('mainChart').getContext('2d');
+            mainChart = new Chart(ctxMain, {
+                type: 'scatter',
+                data: { datasets: [] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    onClick: (e) => {
+                        const canvasPosition = Chart.helpers.getRelativePosition(e, mainChart);
+                        const dataX = mainChart.scales.x.getValueForPixel(canvasPosition.x);
+                        const dataY = mainChart.scales.y.getValueForPixel(canvasPosition.y);
+                        addDataPoint(dataX, dataY);
+                    },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { title: { display: true, text: 'X Value' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { title: { display: true, text: 'Y Value' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    },
+                    animation: { duration: 400 }
+                }
+            });
+
+            const ctxRes = document.getElementById('residualsChart').getContext('2d');
+            residualsChart = new Chart(ctxRes, {
+                type: 'scatter',
+                data: { datasets: [] }, 
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } },
+                    scales: {
+                        x: { title: { display: true, text: 'X Value' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { title: { display: true, text: 'Residual (Error)' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+        }
+
+        function renderDataTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+            const sorted = [...dataPoints].sort((a, b) => a.x - b.x);
+            sorted.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.x.toFixed(2)}</td>
+                    <td>${p.y.toFixed(2)}</td>
+                    <td><button onclick="removeDataPoint(${p.id})" class="text-red-400 hover:text-red-300 hover:scale-125 transition-transform"><i class="fa-solid fa-xmark"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addDataPoint(x, y) {
+            if(isNaN(x) || isNaN(y)) return;
+            dataPoints.push({id: nextId++, x: parseFloat(x), y: parseFloat(y)});
+            updateAll();
+        }
+
+        function removeDataPoint(id) {
+            dataPoints = dataPoints.filter(p => p.id !== id);
+            updateAll();
+        }
+
+        function updateAll() {
+            renderDataTable();
+            
+            const activeModels = Array.from(document.querySelectorAll('.model-toggle:checked')).map(cb => cb.value);
+            const degree = parseInt(document.getElementById('polyDegree').value) || 2;
+            const showOutliers = document.getElementById('outlierToggle').checked;
+
+            let allOutlierIds = new Set();
+            let modelData = [];
+
+            let minX = dataPoints.length ? Math.min(...dataPoints.map(p=>p.x)) : 0;
+            let maxX = dataPoints.length ? Math.max(...dataPoints.map(p=>p.x)) : 10;
+            let range = maxX - minX;
+            minX -= range * 0.1; maxX += range * 0.1;
+            if(minX === maxX) { minX -= 1; maxX += 1; }
+
+            let resultsHTML = '';
+            let legendHTML = `<span class="flex items-center gap-1.5 text-xs text-gray-300"><span class="w-2.5 h-2.5 rounded-full bg-[#e2e8f0] shadow-[0_0_5px_#e2e8f0]"></span> Data</span>`;
+            if(showOutliers) legendHTML += `<span class="flex items-center gap-1.5 text-xs text-gray-300"><span class="w-2.5 h-2.5 rounded-full border-2 border-orange-500 bg-transparent shadow-[0_0_5px_#f97316]"></span> Outlier</span>`;
+            
+            let residualDatasets = [];
+
+            activeModels.forEach(modelKey => {
+                const modelDef = Models[modelKey];
+                let fitResult = null;
+                try {
+                    if(modelKey === 'polynomial') fitResult = modelDef.fit(dataPoints, degree);
+                    else fitResult = modelDef.fit(dataPoints);
+                } catch(e) {}
+
+                if(fitResult) {
+                    let lineData = [];
+                    let step = (maxX - minX) / 100;
+                    for(let x = minX; x <= maxX; x += step) {
+                        let y = fitResult.fn(x);
+                        if(isFinite(y) && !isNaN(y)) lineData.push({x, y});
+                    }
+
+                    const metrics = calculateMetrics(dataPoints, fitResult.fn);
+                    if(showOutliers) metrics.outliers.forEach(id => allOutlierIds.add(id));
+
+                    let behaviorHtml = '<span class="px-2.5 py-1 rounded-md bg-teal-500/20 text-teal-400 text-xs font-medium border border-teal-500/30">Balanced</span>';
+                    if (metrics.r2 < 0.5) behaviorHtml = '<span class="px-2.5 py-1 rounded-md bg-yellow-500/20 text-yellow-400 text-xs font-medium border border-yellow-500/30">Underfitting (Too simple)</span>';
+                    if (modelKey === 'polynomial' && degree >= 5 && metrics.r2 > 0.95) behaviorHtml = '<span class="px-2.5 py-1 rounded-md bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/30 animate-pulse">Risk: Overfitting</span>';
+
+                    resultsHTML += `
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                            <td class="py-3 px-5 flex items-center gap-2"><div class="w-3 h-3 rounded-full shadow-[0_0_8px_${modelDef.color}]" style="background-color: ${modelDef.color}"></div><span class="font-medium group-hover:text-white transition-colors">${modelDef.name}</span></td>
+                            <td class="py-3 px-5 font-mono text-xs text-brand-light max-w-[250px] truncate" title="${fitResult.eq}">${fitResult.eq}</td>
+                            <td class="py-3 px-5 text-right font-medium ${metrics.r2 > 0.8 ? 'text-teal-400' : 'text-gray-400'}">${metrics.r2.toFixed(4)}</td>
+                            <td class="py-3 px-5 text-right font-medium text-gray-300">${metrics.rmse.toFixed(4)}</td>
+                            <td class="py-3 px-5 text-center">${behaviorHtml}</td>
+                        </tr>
+                    `;
+
+                    legendHTML += `<span class="flex items-center gap-1.5 text-xs text-gray-300"><span class="w-2.5 h-2.5 rounded-full shadow-[0_0_5px_${modelDef.color}]" style="background-color: ${modelDef.color}"></span> ${modelDef.name}</span>`;
+
+                    modelData.push({
+                        type: 'line',
+                        label: modelDef.name,
+                        data: lineData,
+                        borderColor: modelDef.color,
+                        borderWidth: 3,
+                        pointRadius: 0, fill: false, tension: 0.1, order: 0
+                    });
+
+                    residualDatasets.push({
+                        label: modelDef.name + ' Residuals',
+                        data: metrics.residuals,
+                        backgroundColor: modelDef.color,
+                        pointRadius: 4,
+                        hoverRadius: 6
+                    });
+                }
+            });
+
+            let regularPoints = [];
+            let outlierPoints = [];
+            
+            dataPoints.forEach(p => {
+                if(showOutliers && allOutlierIds.has(p.id)) outlierPoints.push(p);
+                else regularPoints.push(p);
+            });
+
+            let mainDatasets = [
+                { type: 'scatter', label: 'Data', data: regularPoints, backgroundColor: '#e2e8f0', pointRadius: 5, hoverRadius: 8, order: 1 },
+                ...modelData
+            ];
+
+            if(showOutliers && outlierPoints.length > 0) {
+                mainDatasets.push({
+                    type: 'scatter', label: 'Outliers', data: outlierPoints,
+                    backgroundColor: 'rgba(0,0,0,0.5)', borderColor: '#f97316', borderWidth: 2, pointRadius: 7, hoverRadius: 10, order: 1
+                });
+            }
+
+            document.getElementById('resultsTableBody').innerHTML = resultsHTML || `<tr><td colspan="5" class="py-6 text-center text-gray-500 italic">No models active. Toggle models to view metrics.</td></tr>`;
+            document.getElementById('chartLegend').innerHTML = legendHTML;
+
+            mainChart.data.datasets = mainDatasets;
+            mainChart.update();
+
+            residualsChart.data.datasets = residualDatasets;
+            residualsChart.update();
+        }
+
+        // --- 4. EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            updateAll();
+
+            // Nav Animation Logic
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sidebar = document.getElementById('sidebar');
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    navLinks.forEach(l => {
+                        l.classList.remove('bg-brand/20', 'text-brand-light', 'border-brand/30', 'active-nav', 'shadow-[0_0_15px_rgba(13,148,136,0.15)]');
+                        l.classList.add('text-gray-400', 'border-transparent', 'hover:bg-white/5');
+                    });
+                    link.classList.remove('text-gray-400', 'border-transparent', 'hover:bg-white/5');
+                    link.classList.add('bg-brand/20', 'text-brand-light', 'border-brand/30', 'active-nav', 'shadow-[0_0_15px_rgba(13,148,136,0.15)]');
+                    if (window.innerWidth < 768) sidebar.classList.add('-translate-x-full');
+                });
+            });
+
+            document.getElementById('openSidebar').addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+            document.getElementById('closeSidebar').addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+            document.getElementById('addPointBtn').addEventListener('click', () => {
+                const x = document.getElementById('inputX').value;
+                const y = document.getElementById('inputY').value;
+                if(x !== '' && y !== '') {
+                    addDataPoint(x, y);
+                    document.getElementById('inputX').value = ''; document.getElementById('inputY').value = '';
+                }
+            });
+
+            document.getElementById('genRandomBtn').addEventListener('click', () => {
+                dataPoints = [];
+                for(let i=1; i<=20; i++) {
+                    let base = 2 * i + 10;
+                    let noise = (Math.random() - 0.5) * 15;
+                    dataPoints.push({id: nextId++, x: i, y: Math.max(0, base + noise)});
+                }
+                updateAll();
+            });
+
+            document.getElementById('clearDataBtn').addEventListener('click', () => { dataPoints = []; updateAll(); });
+            document.getElementById('outlierToggle').addEventListener('change', updateAll);
+
+            document.querySelectorAll('.model-toggle').forEach(cb => cb.addEventListener('change', updateAll));
+            document.getElementById('polyDegree').addEventListener('input', updateAll);
+
+            document.getElementById('dataFileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target.result;
+                    if(file.name.endsWith('.json')) {
+                        try {
+                            const parsed = JSON.parse(text);
+                            if(Array.isArray(parsed)) {
+                                parsed.forEach(p => { if(p.x !== undefined && p.y !== undefined) dataPoints.push({id: nextId++, x: parseFloat(p.x), y: parseFloat(p.y)}); });
+                            }
+                        } catch(err) { alert("Invalid JSON format. Needs array of objects with x and y."); }
+                    } else {
+                        const lines = text.split('\n');
+                        lines.forEach(line => {
+                            const parts = line.split(',');
+                            if(parts.length >= 2) {
+                                const x = parseFloat(parts[0].trim()), y = parseFloat(parts[1].trim());
+                                if(!isNaN(x) && !isNaN(y)) dataPoints.push({id: nextId++, x, y});
+                            }
+                        });
+                    }
+                    updateAll();
+                    e.target.value = '';
+                };
+                reader.readAsText(file);
+            });
+        });
+    </script>
+</body>
+</html>
